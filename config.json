@@ -1,0 +1,49 @@
+{
+    "mode": "enforcer",
+    "interface": "enp0s8",
+    "ports": [80, 22, 21],
+    "whitelist": ["127.0.0.1","1.1.1.11"],
+    "thresholds": {
+        "request_rate_limit": 50,
+        "request_rate_window_seconds": 3,
+        "port_scan_count": 10,
+        "port_scan_window_seconds": 3,
+        "anomaly_deviation_factor": 3,
+        "max_packet_size": 1600,
+        "max_packets_per_ip": 100,
+        "anomaly_tracking_window_seconds": 1
+    },
+    "alerts": {
+        "terminal": true,
+        "webhook_url": "http://10.0.2.2:5678/webhook/9b94e8d8-c370-422e-9881-bc590306ff25",
+        "alert_cooldown_seconds": 30,
+        "rate_limit_alerts": true
+    },
+    "logging": {
+        "log_dir": "data/logs/",
+        "log_level": "INFO",
+        "max_log_files": 30,
+        "enable_json_logging": true
+    },
+    "baseline": {
+        "learning_duration_seconds": 300,
+        "learning_enabled": false,
+        "baseline_file": "data/baseline.json"
+    },
+    "response": {
+        "auto_block": true,
+        "block_duration_seconds": 3600,
+        "max_blocks_per_ip": 5,
+        "persist_blocks": true
+    },
+    "performance": {
+        "max_queue_size": 10000,
+        "sniff_buffer_size": 65535,
+        "promiscuous_mode": false
+    },
+    "signatures": {
+        "enabled": true,
+        "signature_file": "data/signatures.json",
+        "reload_interval_seconds": 300
+    }
+}

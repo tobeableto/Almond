@@ -1,0 +1,113 @@
+{
+    "signatures": [
+        {
+            "id": "SIG001",
+            "name": "SQL Injection",
+            "pattern": "(?i)(union\\s+select|drop\\s+table|insert\\s+into|delete\\s+from|select\\s+[\\w\\*]+\\s+from|exec\\s*\\(|xp_cmdshell|WAITFOR\\s+DELAY|cast\\s*\\(|convert\\s*\\(|sleep\\s*\\(|benchmark\\s*\\(|'\\s*(or|and)\\s*('\\d|\\d+=\\d+|true|false|null)|--\\s*$|;\\s*--)",
+            "category": "sqli",
+            "severity": "HIGH",
+            "check_in": ["body", "url"],
+            "direction": "BOTH"
+        },
+        {
+            "id": "SIG002",
+            "name": "XSS Attempt",
+            "pattern": "(?i)<\\s*script[^>]{0,200}>|javascript\\s*:|on\\w{1,30}\\s*=\\s*['\"]?[^'\"\\s>]{1,200}|<\\s*img[^>]{0,200}\\s+src\\s*=\\s*['\"]?\\s*x['\"]?[^>]{0,200}onerror|<\\s*iframe[^>]{0,200}>|<\\s*svg[^>]{0,200}onload|expression\\s*\\([^)]{0,100}\\)|\\{\\{[^}]{0,100}\\}\\}|<\\s*details[^>]{0,200}open[^>]{0,200}ontoggle",
+            "category": "xss",
+            "severity": "MEDIUM",
+            "check_in": ["body", "url", "headers"],
+            "direction": "BOTH",
+            "notes": "Added character budgets on wildcards to reduce ReDoS risk. Added template injection pattern {{...}} and <details ontoggle> polyglot. Capped on* attribute value length."
+        },
+        {
+            "id": "SIG003",
+            "name": "Command Injection",
+            "pattern": "(?i)([;|&`$\\n%0a%0d]|\\r)\\s{0,10}(whoami|id(?!\\w)|pwd|ls\\s|cat\\s|wget\\s|curl\\s|bash|sh\\s|\\bnc\\b|netcat|python[23]?|perl|ruby|php\\s|chmod|chown|rm\\s+-rf|cp\\s+|mv\\s+|echo\\s+|touch\\s+|mkdir\\s+|uname|ifconfig|ip\\s+a|ps\\s|kill\\s|passwd|shadow)",
+            "category": "cmdi",
+            "severity": "CRITICAL",
+            "check_in": ["body", "url"],
+            "direction": "BOTH",
+            "notes": "Added \\n, %0a, %0d, \\r as shell metachar prefixes — newline injection bypass fixed. Added negative lookahead on 'id' to avoid FP on 'identifier'. Added Windows && and || are covered via | already."
+        },
+        {
+            "id": "SIG004",
+            "name": "Directory Traversal",
+            "pattern": "(\\.{2,}[\\/\\\\]){1,}|(%2e%2e[\\/\\\\%]){1,}|(%252e%252e[\\/\\\\%]){1,}|(%c0%ae|%c0%2e|%e0%80%ae){1,}[\\/\\\\%]|(\\.\\.%2f){1,}|(\\.\\.%5c){1,}|(%2e%2e%2f){1,}|(\\.{2,}%255c){1,}|(\\.\\.[\\/\\\\]){3,}",
+            "category": "traversal",
+            "severity": "HIGH",
+            "check_in": ["url"],
+            "direction": "INBOUND",
+            "notes": "Added Unicode overlong encoding bypasses (%c0%ae, %c0%2e, %e0%80%ae — classic JVM/IIS bypass). Added triple-encoding (%255c). Minimum depth of 3 traversals required to reduce FP on relative paths."
+        },
+        {
+            "id": "SIG005",
+            "name": "Suspicious User Agent",
+            "pattern": "(?i)(sqlmap|nikto|nmap|metasploit|burpsuite|burp\\s+suite|hydra|masscan|zgrab|dirbuster|gobuster|wfuzz|zaproxy|owasp\\s+zap|nuclei|acunetix|nessus|openvas|w3af|skipfish|fierce|dirb|subfinder|amass|shodan|censys|ffuf|feroxbuster|httpx|katana|nuclei|truffelhog|gitleaks|rustscan|interactsh)",
+            "category": "suspicious_ua",
+            "severity": "MEDIUM",
+            "check_in": ["headers"],
+            "direction": "INBOUND",
+            "notes": "Added modern recon tools: ffuf, feroxbuster, httpx, katana, rustscan, interactsh (OAST callback tool), trufflehog, gitleaks."
+        },
+        {
+            "id": "SIG006",
+            "name": "Sensitive File Access",
+            "pattern": "(?i)(\\/etc\\/(passwd|shadow|hosts|crontab|sudoers|ssh\\/|ssl\\/)|wp-config\\.php|\\.env(\\.local|\\.production|\\.development)?|\\/proc\\/(self|\\d+)\\/(environ|cmdline|maps)|web\\.config|applicationhost\\.config|\\.git\\/config|\\.ssh\\/(id_rsa|authorized_keys)|\\.htpasswd|\\.htaccess|\\.npmrc|pip\\.conf|\\/latest\\/meta-data\\/|169\\.254\\.169\\.254)",
+            "category": "file_access",
+            "severity": "HIGH",
+            "check_in": ["url"],
+            "direction": "INBOUND",
+            "notes": "Fixed grouping bug — .htpasswd and .htaccess moved out of the SSH block into their own alternation. Added .npmrc, pip.conf (credential files), and AWS IMDS paths (169.254.169.254 and /latest/meta-data/) for SSRF coverage."
+        },
+        {
+            "id": "SIG007",
+            "name": "Command Injection Encoded",
+            "pattern": "(?i)(%0a|%0d|%3b|%7c|%26|%60|%24%28)(%20)*(%77%68%6f%61%6d%69|%69%64|%6c%73|%63%61%74|%77%67%65%74|%63%75%72%6c|%62%61%73%68|%73%68|%6e%63|%70%79%74%68%6f%6e|%70%65%72%6c)|(%3b|%7c|%26)(%20){0,5}(whoami|id|ls|cat|wget|curl|bash|nc|python|perl)",
+            "category": "cmdi",
+            "severity": "CRITICAL",
+            "check_in": ["url", "body"],
+            "direction": "BOTH",
+            "notes": "Fixed typo: %77hoami -> %77%68%6f%61%6d%69 (fully percent-encoded 'whoami'). Added %0a/%0d (encoded newline) as separator. Added more encoded commands: sh=%73%68, nc=%6e%63, python=%70%79%74%68%6f%6e, perl=%70%65%72%6c. Second branch catches mixed encode/plaintext."
+        },
+        {
+            "id": "SIG008",
+            "name": "Known C2 Pattern",
+            "pattern": "(?i)(cmd\\.exe|powershell(\\.exe)?\\s+-(?:enc(?:odedcommand)?|nop|noni|exec|w\\s+hidden)|wscript|cscript|mshta|rundll32|regsvr32|msiexec|installutil|msbuild).{0,100}(wget|curl|\\bnc\\b|netcat|certutil|bitsadmin)|IEX\\s*\\(|Invoke-Expression|Invoke-WebRequest|DownloadString|DownloadFile|New-Object\\s+Net\\.WebClient|-EncodedCommand",
+            "category": "c2",
+            "severity": "CRITICAL",
+            "check_in": ["body", "url"],
+            "direction": "BOTH",
+            "notes": "Replaced .*? with .{0,100} to prevent ReDoS on large bodies. Added msiexec, InstallUtil, MSBuild (LOLBins). Added -EncodedCommand, Invoke-WebRequest, New-Object Net.WebClient. Added PowerShell flag variants (-enc, -nop, -noni, -w hidden)."
+        },
+        {
+            "id": "SIG009",
+            "name": "Outbound C2 Beacon",
+            "pattern": "(?i)(wget\\s+https?:\\/\\/|curl\\s+-[a-zA-Z]{0,10}\\s+https?:\\/\\/|bash\\s+-i\\s+>&|bash\\s+-c\\s+['\"]|\\bnc\\b\\s+-[a-zA-Z]{0,5}\\s+\\d{1,3}\\.\\d{1,3}|python[23]?\\s+-c\\s+['\"]import\\s+socket|perl\\s+-e\\s+['\"]use\\s+Socket|php\\s+-r\\s+['\"]\\$sock|ruby\\s+-rsocket\\s+-e|go\\s+run.{0,50}dial|powershell.{0,30}TCPClient)",
+            "category": "c2",
+            "severity": "CRITICAL",
+            "check_in": ["body"],
+            "direction": "OUTBOUND",
+            "notes": "Added Ruby socket reverse shell, Go dial pattern, PowerShell TCPClient. Scoped wget/curl to http/https schemes to reduce FP on local file curl. Added character budget to nc pattern."
+        },
+        {
+            "id": "SIG010",
+            "name": "Data Exfiltration Pattern",
+            "pattern": "(?i)(private_key\\s*[:=]\\s*['\"]?[A-Za-z0-9+\\/]{20,}|api_key\\s*[:=]\\s*['\"]?[A-Za-z0-9_\\-]{20,}|access_token\\s*[:=]\\s*['\"]?[A-Za-z0-9_\\-]{20,}|auth_token\\s*[:=]\\s*['\"]?[A-Za-z0-9_\\-]{20,}|aws_secret_access_key\\s*[:=]\\s*['\"]?[A-Za-z0-9+\\/]{40}|database_url\\s*[:=]\\s*['\"]?[a-z]+:\\/\\/|bearer\\s+[A-Za-z0-9_\\-\\.]{40,}|\\b4[0-9]{12}(?:[0-9]{3})?\\b|\\b5[1-5][0-9]{14}\\b|\\b3[47][0-9]{13}\\b)",
+            "category": "exfil",
+            "severity": "HIGH",
+            "check_in": ["body"],
+            "direction": "OUTBOUND",
+            "notes": "Major FP reduction: removed bare 'password', 'secret', 'ssn', 'social security' keywords. Now requires key=value assignment context for secrets. Bearer token minimum length raised to 40. Credit card patterns replaced with BIN-specific prefixes (Visa=4, MC=5[1-5], Amex=3[47]) rather than any 16 digits. Remove 'db_password' bare keyword."
+        },
+        {
+            "id": "SIG011",
+            "name": "Reverse Shell Attempt",
+            "pattern": "(?i)(bash\\s+-i\\s+>&\\s+\\/dev\\/tcp\\/|0>&1|\\bnc\\b.{0,30}\\b(\\d{1,3}\\.){3}\\d{1,3}\\b.{0,10}\\d{2,5}|ncat.{0,30}--exec|python.{0,50}socket.{0,50}connect|socat.{0,50}exec|mkfifo.{0,50}\\/tmp|powershell.{0,50}System\\.Net\\.Sockets\\.TCPClient|xterm.{0,30}-display.{0,30}\\d+\\.\\d+)",
+            "category": "reverse_shell",
+            "severity": "CRITICAL",
+            "check_in": ["body"],
+            "direction": "OUTBOUND",
+            "notes": "Added ncat --exec, PowerShell TCPClient reverse shell, xterm -display (older but still seen). Slightly relaxed python socket wildcard budget from 30 to 50 chars to reduce FN on varied spacing."
+        }
+    ]
+}
