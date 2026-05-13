@@ -25,11 +25,6 @@
         "max_log_files": 30,
         "enable_json_logging": true
     },
-    "baseline": {
-        "learning_duration_seconds": 300,
-        "learning_enabled": false,
-        "baseline_file": "data/baseline.json"
-    },
     "response": {
         "auto_block": true,
         "block_duration_seconds": 3600,
